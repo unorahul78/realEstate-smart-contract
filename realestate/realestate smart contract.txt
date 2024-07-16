@@ -1,0 +1,76 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract RealEstate {
+    struct Property {
+      //   uint256 id;
+        string name;
+        string location;
+        uint256 price;
+        address owner;
+        bool forSale;
+        
+    }
+
+    Property[] public properties;
+    uint256 public propertyCount;
+    address public contractOwner;
+
+
+    event PropertyBought(uint256 propertyId, string message);
+
+   
+
+    modifier onlyOwner(uint256 _propertyId) {
+        require(properties[_propertyId].owner == msg.sender, "Only the owner can call");
+        _;
+    }
+
+    modifier onlyContractOwner() {
+        require(msg.sender == contractOwner, "Only  owner can ");
+        _;
+    }
+
+    constructor() {
+        contractOwner = msg.sender;
+         propertyCount = 0; //  propertyCount to start from 0
+
+    }
+
+    function addProperty(string memory _name, string memory _location, uint256 _price) public onlyContractOwner {
+        propertyCount++;
+        properties.push(Property( _name, _location, _price, msg.sender, false));
+    }
+
+    function listPropertyForSale(uint256 _propertyId, uint256 _price) public onlyOwner(_propertyId) {
+        Property storage property = properties[_propertyId];
+        property.price = _price;
+        property.forSale = true;
+
+    }
+
+    function buyProperty(uint256 _propertyId) public payable {
+        Property storage property = properties[_propertyId];
+        require(property.forSale, "Property is sold");
+        require(msg.value ==  property.price, "Incorrect value sent");
+        require(msg.sender != property.owner, "Owner can't buy their own property");
+        
+
+        address payable previousOwner = payable(property.owner);
+        previousOwner.transfer(msg.value);
+
+        property.owner = msg.sender;
+        property.forSale = false;
+                emit PropertyBought(_propertyId, "You have successfully bought the property");
+
+
+    }
+
+    
+
+    function removePropertyFromSale(uint256 _propertyId) public onlyOwner(_propertyId) {
+        Property storage property = properties[_propertyId];
+        property.forSale = false;
+
+    }
+}
